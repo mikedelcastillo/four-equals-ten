@@ -118,7 +118,7 @@ impl Equation {
         let mut count = 0;
         loop {
             count += 1;
-            println!("({}) (step{}) = {}", self.format(), count, comp.format());
+            // println!("({}) (step{}) = {}", self.format(), count, comp.format());
             if count > 5 {
                 panic!("took too long");
             }
@@ -172,11 +172,40 @@ impl Equation {
 }
 
 fn main() {
-    let problem = Equation::new(
-        vec![1.0, 0.0, 6.0, 3.0],
-        vec![Op::Sub, Op::Sub, Op::Sub],
+    let pool = [8, 1, 3, 9];
+    let target = 10.0;
+    let ops = [Op::Add, Op::Sub, Op::Mul, Op::Div];
+    let parens = [
+        Parens::None, 
+        Parens::Span(0, 1),
+        Parens::Span(0, 2),
+        Parens::Span(1, 2),
         Parens::Span(1, 3),
-    );
-
-    println!("{} = {}", &problem.format(), &problem.solve());
+        Parens::Span(2, 3),
+    ];
+    for a in pool.iter() {
+        for b in pool.iter() {
+            for c in pool.iter() {
+                for d in pool.iter() {
+                    for x in ops.iter() {
+                        for y in ops.iter() {
+                            for z in ops.iter() {
+                                for p in parens.iter() {
+                                    let problem = Equation::new(
+                                        vec![N::from(*a), N::from(*b), N::from(*c), N::from(*d)],
+                                        vec![x.clone(), y.clone(), z.clone()],
+                                        p.clone(),
+                                    );
+                                    let result = problem.solve();
+                                    if result == target {
+                                        println!("{} = {}", &problem.format(), &problem.solve());
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
