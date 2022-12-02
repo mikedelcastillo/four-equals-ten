@@ -15,7 +15,7 @@ enum Parens {
 }
 
 #[derive(Debug, Clone)]
-enum Computation {
+enum Equation {
     Solved(N),
     Expression {
         nums: Vec<N>,
@@ -24,7 +24,7 @@ enum Computation {
     },
 }
 
-impl Computation {
+impl Equation {
     fn new(nums: Vec<N>, ops: Vec<Op>, parens: Parens) -> Self {
         Self::Expression { nums, ops, parens }
     }
@@ -118,25 +118,65 @@ impl Computation {
         let mut count = 0;
         loop {
             count += 1;
-            println!("STEP #{}: {:?}", count, comp);
+            println!("({}) (step{}) = {}", self.format(), count, comp.format());
             if count > 5 {
                 panic!("took too long");
             }
-            if let Computation::Solved(n) = comp {
+            if let Equation::Solved(n) = comp {
                 return n;
             } else {
                 comp = comp.step()
             }
         }
     }
+
+    fn format(&self) -> String {
+        match self {
+            Equation::Solved(n) => n.to_string(),
+            Equation::Expression { nums, ops, parens } => {
+                let mut output = String::new();
+
+                for (i, n) in nums.iter().enumerate() {
+                    let part = n.to_string();
+                    let part = match parens {
+                        Parens::Span(start, end) => {
+                            if &i == start {
+                                format!("({}", part)
+                            } else if &i == end {
+                                format!("{})", part)
+                            } else {
+                                part
+                            }
+                        }
+                        Parens::None => part,
+                    };
+
+                    let op = if i < ops.len() {
+                        match ops[i] {
+                            Op::Add => "+",
+                            Op::Mul => "*",
+                            Op::Sub => "-",
+                            Op::Div => "/",
+                        }
+                    } else {
+                        ""
+                    };
+
+                    output = format!("{} {} {}", output, part, op)
+                }
+
+                output.trim().to_string()
+            }
+        }
+    }
 }
 
 fn main() {
-    let problem = Computation::new(
+    let problem = Equation::new(
         vec![1.0, 0.0, 6.0, 3.0],
         vec![Op::Sub, Op::Sub, Op::Sub],
         Parens::Span(1, 3),
     );
 
-    println!("{:?} = {:?}", &problem, &problem.solve());
+    println!("{} = {}", &problem.format(), &problem.solve());
 }
