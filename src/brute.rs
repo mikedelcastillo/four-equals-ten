@@ -1,45 +1,142 @@
-#[derive(Debug)]
-enum NumOp {
-    Add(Box<NumOp>, Box<NumOp>),
-    Sub(Box<NumOp>, Box<NumOp>),
-    Mul(Box<NumOp>, Box<NumOp>),
-    Div(Box<NumOp>, Box<NumOp>),
-    N(i32),
+type N = f64;
+
+#[derive(Debug, Clone, PartialEq)]
+enum Op {
+    Add,
+    Mul,
+    Sub,
+    Div,
 }
 
-impl NumOp {
-    fn compute(&self) -> i32 {
-        match self {
-            NumOp::Add(a, b) => a.compute() + b.compute(),
-            NumOp::Sub(a, b) => a.compute() - b.compute(),
-            NumOp::Mul(a, b) => a.compute() * b.compute(),
-            NumOp::Div(a, b) => a.compute() / b.compute(),
-            NumOp::N(a) => *a,
+#[derive(Debug, Clone)]
+enum Parens {
+    Span(usize, usize),
+    None,
+}
+
+#[derive(Debug, Clone)]
+enum Computation {
+    Solved(N),
+    Expression {
+        nums: Vec<N>,
+        ops: Vec<Op>,
+        parens: Parens,
+    },
+}
+
+impl Computation {
+    fn new(nums: Vec<N>, ops: Vec<Op>, parens: Parens) -> Self {
+        Self::Expression { nums, ops, parens }
+    }
+
+    fn from_comp(nums: Vec<N>, ops: Vec<Op>) -> Self {
+        if nums.len() == 1 {
+            Self::Solved(nums[0])
+        } else {
+            Self::Expression {
+                nums,
+                ops,
+                parens: Parens::None,
+            }
+        }
+    }
+
+    fn step(&self) -> Self {
+        let comp = self.clone();
+
+        // If computation is already solved
+        if let Self::Solved(_) = comp {
+            return comp;
+        } else if let Self::Expression { nums, ops, parens } = comp {
+            let mut mod_nums = nums.clone();
+            let mut mod_ops = ops.clone();
+
+            // Parentheses
+            if let Parens::Span(start, end) = parens {
+                let result = Self::new(
+                    nums[start..=end].to_vec(),
+                    ops[start..end].to_vec(),
+                    Parens::None,
+                );
+
+                mod_nums.splice(start..=end, vec![result.solve()]);
+                mod_ops.splice(start..end, []);
+
+                return Self::from_comp(mod_nums, mod_ops);
+            }
+
+            // Division
+            let index = ops.iter().position(|op| op == &Op::Div);
+            if let Some(index) = index {
+                let result = nums[index] / nums[index + 1];
+
+                mod_nums.splice(index..=index + 1, vec![result]);
+                mod_ops.splice(index..=index, []);
+
+                return Self::from_comp(mod_nums, mod_ops);
+            }
+
+            // Multiplication
+            let index = ops.iter().position(|op| op == &Op::Mul);
+            if let Some(index) = index {
+                let result = nums[index] * nums[index + 1];
+
+                mod_nums.splice(index..=index + 1, vec![result]);
+                mod_ops.splice(index..=index, []);
+
+                return Self::from_comp(mod_nums, mod_ops);
+            }
+
+            // Addition
+            let index = ops.iter().position(|op| op == &Op::Add);
+            if let Some(index) = index {
+                let result = nums[index] + nums[index + 1];
+
+                mod_nums.splice(index..=index + 1, vec![result]);
+                mod_ops.splice(index..=index, []);
+
+                return Self::from_comp(mod_nums, mod_ops);
+            }
+
+            // Subtraction
+            let index = ops.iter().position(|op| op == &Op::Sub);
+            if let Some(index) = index {
+                let result = nums[index] - nums[index + 1];
+
+                mod_nums.splice(index..=index + 1, vec![result]);
+                mod_ops.splice(index..=index, []);
+
+                return Self::from_comp(mod_nums, mod_ops);
+            }
+        }
+
+        unreachable!()
+    }
+
+    fn solve(&self) -> N {
+        let mut comp = self.clone();
+        let mut count = 0;
+        loop {
+            count += 1;
+            println!("STEP #{}: {:?}", count, comp);
+            if count > 5 {
+                panic!("took too long");
+            }
+            if let Computation::Solved(n) = comp {
+                return n;
+            } else {
+                comp = comp.step()
+            }
         }
     }
 }
 
-// _ n _ ~ _ n _ ~ _ n _ ~ _ n _
-
-// (1+2)+3+4
-// (1+2+3)+4
-// 1+(2+3)+4
-// 1+(2+3+4)
-// 1+2+(3+4)
-
 fn main() {
-    let add = NumOp::Mul(
-        Box::new(NumOp::N(5)), 
-        Box::new(NumOp::Add(
-            Box::new(NumOp::N(55)),
-            Box::new(NumOp::Add(
-                Box::new(NumOp::N(55)),
-                Box::new(NumOp::Add(
-                    Box::new(NumOp::N(55)),
-                    Box::new(NumOp::N(2)),
-                )),
-            )),
-        )));
+    let problem = Computation::new(
+        vec![1.0, 0.0, 6.0, 3.0],
+        vec![Op::Sub, Op::Sub, Op::Sub],
+        Parens::Span(1, 3),
+    );
 
-    println!("{:?} = {}", add, add.compute())
+    println!("{:?} = {:?}", &problem, &problem.solve());
 }
