@@ -10,3 +10,4 @@ name="brute"
 path="./src/brute.rs"
 
 [dependencies]
+itertools = "0.10.5"
